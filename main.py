@@ -1,4 +1,3 @@
-import copy
 from dataclasses import dataclass, field
 from typing import List
 from pathlib import Path
@@ -88,7 +87,6 @@ def find_sequences(signals: List[List[int]]) -> List[Result]:
 
                     case _ if diff > 2:
                         result.start_new_sequence()
-
 
                 result.temp_sequence.append(number)
 
