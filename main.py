@@ -9,22 +9,30 @@ class Result:
 
     temp_sequence: List[int] = field(default_factory=lambda: [])
     temp_missing_value: int | None = None
+    temp_index_missing_value: int | None = None
     temp_duplicate_value: int | None = None
+    temp_index_duplicate_value: int | None = None
 
     sequence: List[int] = field(default_factory=lambda: [])
-    missing_value: int = None
-    duplicate_value: int = None
+    missing_value: int | None = None
+    index_missing_value: int | None = None
+    duplicate_value: int | None = None
+    index_duplicate_value: int | None = None
 
     def save_longuest_sequence(self):
         self.sequence = self.temp_sequence.copy()
         self.missing_value = self.temp_missing_value
+        self.index_missing_value = self.temp_index_missing_value
         self.duplicate_value = self.temp_duplicate_value
+        self.index_duplicate_value = self.temp_index_duplicate_value
         self.longuest_sequence = len(self.temp_sequence)
 
     def reset_result(self):
         self.temp_sequence = []
         self.temp_missing_value = None
+        self.temp_index_missing_value = None
         self.temp_duplicate_value = None
+        self.temp_index_duplicate_value = None
 
     def start_new_sequence(self):
         if len(self.temp_sequence) > self.longuest_sequence:
@@ -32,6 +40,24 @@ class Result:
                 self.save_longuest_sequence()
 
         self.reset_result()
+
+    def start_new_sequence_to_predefined(self, restart_index: int):
+        self.save_longuest_sequence()
+
+        self.temp_sequence = self.temp_sequence[restart_index:]
+
+        if self.temp_index_missing_value <= restart_index:
+            self.temp_missing_value = None
+            self.temp_index_missing_value = None
+        else:
+            self.temp_index_missing_value = self.temp_index_missing_value - restart_index
+
+        if self.temp_index_duplicate_value <= restart_index:
+            self.temp_index_duplicate_value = None
+            self.temp_index_duplicate_value = None
+        else:
+            self.temp_index_duplicate_value = self.temp_index_duplicate_value - restart_index
+
 
     def print_result(self):
         print(
@@ -59,7 +85,7 @@ def read_file(filename: Path) -> List[List[int]]:
 
 def find_sequences(signals: List[List[int]]) -> List[Result]:
     results = []
-    for signal in signals:
+    for s, signal in enumerate(signals):
         sorted_signal = sorted(signal)
 
         result = None
@@ -72,18 +98,20 @@ def find_sequences(signals: List[List[int]]) -> List[Result]:
                 # If diff is 0, duplicate. If diff is 2, missing value. If bigger, is a new sequence
                 match (diff := number - result.temp_sequence[-1]):
                     case 0:
-                        if result.temp_duplicate_value is None:
-                            result.temp_duplicate_value = number
-                        else:
+                        if result.temp_duplicate_value is not None:
                             # Two duplicate values
-                            result.start_new_sequence()
+                            result.start_new_sequence_to_predefined(result.temp_duplicate_value)
+
+                        result.temp_duplicate_value = number
+                        result.temp_index_duplicate_value = len(result.temp_sequence)
 
                     case 2:
-                        if result.temp_missing_value is None:
-                            result.temp_missing_value = number - 1
-                        else:
+                        if result.temp_index_missing_value is not None:
                             # Two missing values
-                            result.start_new_sequence()
+                            result.start_new_sequence_to_predefined(result.temp_index_missing_value)
+
+                        result.temp_missing_value = number - 1
+                        result.temp_index_missing_value = len(result.temp_sequence)
 
                     case _ if diff > 2:
                         result.start_new_sequence()
